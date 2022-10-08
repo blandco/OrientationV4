@@ -1,65 +1,129 @@
 package com.joelbland.orientation;
 
-import androidx.appcompat.app.AppCompatActivity;
 import android.content.res.Configuration;
+import android.content.res.Resources;
 import android.os.Bundle;
+import android.util.DisplayMetrics;
 import android.util.Log;
-import android.view.ViewGroup;
+import android.util.TypedValue;
+import android.view.ViewGroup.MarginLayoutParams;
+import android.view.ViewGroup.LayoutParams;
 import android.widget.Button;
+import android.widget.LinearLayout;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    public final static String MA = "MainActivity";
-    public final static int SPACING_VERTICAL = 50;
-    public final static int SPACING_HORIZONTAL = 25;
+    public static String MA = "MainActivity";
+    public static int ACTION_BAR_HEIGHT = 56; // vertical, in dp units
 
-    @Override
+    private float pixelDensity;
+    private boolean verticalDimensionsSet;
+    public static int screenHeightInVP;
+    private int spacingInVP;
+
+    private boolean horizontalDimensionsSet;
+    public static int screenHeightInHP;
+    private int spacingInHP;
+
+    private Button b1, b2, b3;
+    private int actionBarHeight;
+
     protected void onCreate(Bundle savedInstanceState) {
-        Log.w( "MainActivity", "Inside onCreate" );
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        Configuration config = getResources( ).getConfiguration( );
-        modifyLayout( config );
+        setUpGui();
+        Resources res = getResources();
+        DisplayMetrics metrics = res.getDisplayMetrics();
+        pixelDensity = metrics.density;
+        Configuration config = getResources().getConfiguration();
+        checkDimensions(config);
+        modifyLayout(config);
     }
 
-    // V1 code
-    public void onConfigurationChanged( Configuration newConfig ) {
-        Log.w( "MainActivity", "Inside onConfigurationChanged" );
-        super.onConfigurationChanged( newConfig );
-        modifyLayout( newConfig );
-    }
+    public void checkDimensions(Configuration config) {
+        // retrieve ActionBar height
+        actionBarHeight = (int) (pixelDensity * ACTION_BAR_HEIGHT);
+        TypedValue tv = new TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.actionBarSize,
+                tv, true))
+            actionBarHeight = TypedValue.complexToDimensionPixelSize(tv.data,
+                    getResources().getDisplayMetrics());
+        Log.w(MA, "action bar height = " + actionBarHeight);
 
-    public void modifyLayout( Configuration newConfig ) {
-        Button b2 = ( Button ) findViewById( R.id.button2 );
-        ViewGroup.MarginLayoutParams params2
-                = (ViewGroup.MarginLayoutParams) b2.getLayoutParams( );
-        Button b3 = ( Button ) findViewById( R.id.button3 );
-        ViewGroup.MarginLayoutParams params3
-                = (ViewGroup.MarginLayoutParams) b3.getLayoutParams( );
+        // measure button height
+        b1.measure(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        int buttonHeight = b1.getMeasuredHeight();
 
-        if( newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE ) {
-            params2.setMargins( 0, SPACING_HORIZONTAL, 0, 0 );
-            params3.setMargins( 0, SPACING_HORIZONTAL, 0, 0 );
-        } else if( newConfig.orientation
-                == Configuration.ORIENTATION_PORTRAIT ) {
-            params2.setMargins( 0, SPACING_VERTICAL, 0, 0 );
-            params3.setMargins( 0, SPACING_VERTICAL, 0, 0 );
+        // set spacing between buttons depending on orientation
+        if (config.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            screenHeightInHP = (int) (config.screenHeightDp * pixelDensity);
+            spacingInHP =
+                    (screenHeightInHP - actionBarHeight - 3 * buttonHeight) / 4;
+            horizontalDimensionsSet = true;
+        } else if (config.orientation == Configuration.ORIENTATION_PORTRAIT) {
+            screenHeightInVP = (int) (config.screenHeightDp * pixelDensity);
+            spacingInVP =
+                    (screenHeightInVP - actionBarHeight - 3 * buttonHeight) / 4;
+            verticalDimensionsSet = true;
         }
     }
 
-    // V0 code
-   /* public void onConfigurationChanged( Configuration newConfig ) {
-        super.onConfigurationChanged( newConfig );
-        System.out.println("From onConfigChanged Method!!!");
-        Log.w( MA, "Height: " + newConfig.screenHeightDp );
-        Log.w( MA, "Width: " + newConfig.screenWidthDp );
+    public void setUpGui() {
+        LinearLayout linearLayout = new LinearLayout(this);
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+        linearLayout.setGravity(LinearLayout.VERTICAL);
 
-        Log.w( MA, "Orientation: " + newConfig.orientation );
-        if( newConfig.orientation == Configuration.ORIENTATION_LANDSCAPE )
-            Log.w( MA, "Horizontal position" );
-        else if( newConfig.orientation == Configuration.ORIENTATION_PORTRAIT )
-            Log.w( MA, "Vertical position" );
-        else
-            Log.w( MA, "Undetermined position" );
-    }*/
+        b1 = new Button(this);
+        b2 = new Button(this);
+        b3 = new Button(this);
 
+        b1.setText("GO TO VIEW 1");
+        b2.setText("GO TO VIEW 2");
+        b3.setText("GO TO VIEW 3");
+
+
+        LayoutParams params = new LayoutParams
+                (LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+        b1.setLayoutParams(params);
+        b2.setLayoutParams(params);
+        b3.setLayoutParams(params);
+
+        b1.setTextSize(36);
+        b2.setTextSize(36);
+        b3.setTextSize(36);
+
+        linearLayout.addView(b1);
+        linearLayout.addView(b2);
+        linearLayout.addView(b3);
+
+
+        setContentView(linearLayout);
+    }
+
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        if (!verticalDimensionsSet || !horizontalDimensionsSet)
+            checkDimensions(newConfig);
+        modifyLayout(newConfig);
+    }
+
+    public void setLayoutMargins(int spacing) {
+        MarginLayoutParams params1 =
+                (MarginLayoutParams) b1.getLayoutParams();
+        MarginLayoutParams params2 =
+                (MarginLayoutParams) b2.getLayoutParams();
+        MarginLayoutParams params3 =
+                (MarginLayoutParams) b3.getLayoutParams();
+
+        params1.setMargins(0, spacing, 0, 0);
+        params2.setMargins(0, spacing, 0, 0);
+        params3.setMargins(0, spacing, 0, 0);
+    }
+
+    public void modifyLayout(Configuration config) {
+        if (config.orientation == Configuration.ORIENTATION_LANDSCAPE)
+            setLayoutMargins(spacingInHP);
+        else if (config.orientation == Configuration.ORIENTATION_PORTRAIT)
+            setLayoutMargins(spacingInVP);
+    }
 }
